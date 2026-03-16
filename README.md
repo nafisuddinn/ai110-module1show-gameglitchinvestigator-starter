@@ -40,7 +40,7 @@ To help debug the program, I utilized the GPT-5.3-Codex model within Copilot to 
 ## 📸 Demo
 
 - [ ] [Insert a screenshot of your fixed, winning game here]
-      ![Screenshot of winning game](../Screenshot%202026-03-15%20at%2011.35.05%E2%80%AFPM.png)
+      ![Screenshot of winning game](./Screenshot%202026-03-15%20at%2011.35.05%E2%80%AFPM.png)
 
 ## 🚀 Stretch Features
 
