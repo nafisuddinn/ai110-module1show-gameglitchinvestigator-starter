@@ -33,18 +33,14 @@ def check_guess(guess, secret):
     if guess == secret:
         return "Win", "🎉 Correct!"
 
-    try:
-        if guess > secret:
-            return "Too High", "📈 Go HIGHER!"
-        else:
-            return "Too Low", "📉 Go LOWER!"
-    except TypeError:
-        g = str(guess)
-        if g == secret:
-            return "Win", "🎉 Correct!"
-        if g > secret:
-            return "Too High", "📈 Go HIGHER!"
-        return "Too Low", "📉 Go LOWER!"
+    # FIX: Force numeric comparison to avoid lexicographic string comparison bugs.
+    # During my playthrough, I noticed that guesses like "9" were being considered higher than "10" due to string comparison. I asked the AI to investigate and it identified that the check_guess function was comparing guess and secret directly, which could lead to lexicographic comparison if they were strings. I implemented a fix to convert both guess and secret to integers before comparing, ensuring that numeric comparisons work as intended regardless of input format. This resolved the issue and now guesses are evaluated correctly based on their numeric value.
+    guess_num = int(guess)
+    secret_num = int(secret)
+
+    if guess_num > secret_num:
+        return "Too High", "📉 Go LOWER!"
+    return "Too Low", "📈 Go HIGHER!"
 
 
 def update_score(current_score: int, outcome: str, attempt_number: int):
@@ -107,7 +103,7 @@ if "history" not in st.session_state:
 st.subheader("Make a guess")
 
 st.info(
-    f"Guess a number between 1 and 100. "
+    f"Guess a number between {low} and {high}. "
     f"Attempts left: {attempt_limit - st.session_state.attempts}"
 )
 
@@ -133,34 +129,38 @@ with col3:
 
 if new_game:
     st.session_state.attempts = 0
-    st.session_state.secret = random.randint(1, 100)
+    st.session_state.score = 0
+    st.session_state.status = "playing"
+    st.session_state.history = []
+    st.session_state.secret = random.randint(low, high)
+    st.session_state[f"guess_input_{difficulty}"] = ""
     st.success("New game started.")
     st.rerun()
 
 if st.session_state.status != "playing":
     if st.session_state.status == "won":
         st.success("You already won. Start a new game to play again.")
+
+        # Fix: The new game button was not resetting the input field, which could lead to confusion when starting a new game. Now it clears the input field as well.
+        # I asekd the AI to review the code and identify any issues related to game state management and user input handling. It pointed out that the game was not properly ending when the player ran out of attempts, and that the new game button was not resetting the input field. I implemented fixes to set the game status to "lost" when attempts are exhausted and to clear the input field when starting a new game, ensuring a smoother user experience.
     else:
         st.error("Game over. Start a new game to try again.")
     st.stop()
 
 if submit:
-    st.session_state.attempts += 1
-
     ok, guess_int, err = parse_guess(raw_guess)
 
     if not ok:
         st.session_state.history.append(raw_guess)
         st.error(err)
+    elif guess_int < low or guess_int > high:
+        st.session_state.history.append(guess_int)
+        st.error(f"Guess must be between {low} and {high}.")
     else:
+        st.session_state.attempts += 1
         st.session_state.history.append(guess_int)
 
-        if st.session_state.attempts % 2 == 0:
-            secret = str(st.session_state.secret)
-        else:
-            secret = st.session_state.secret
-
-        outcome, message = check_guess(guess_int, secret)
+        outcome, message = check_guess(guess_int, st.session_state.secret)
 
         if show_hint:
             st.warning(message)
@@ -186,6 +186,9 @@ if submit:
                     f"The secret was {st.session_state.secret}. "
                     f"Score: {st.session_state.score}"
                 )
+                # Fix: The game was not properly ending when the player ran out of attempts. Now it sets the status to "lost" and displays the correct message.
+                # Additionally, out-of-range guesses were not being handled correctly, which could lead to confusion. Now it checks for out-of-range guesses and provides appropriate feedback without counting them as attempts.
+                # I ran into the bug during my test playthrough and documented my findings. I brought the issue to the AI in Ask Mode and it pinpointed the problem in the code, then implemented a fix to properly end the game when attempts are exhausted and handle out-of-range guesses correctly.
 
 st.divider()
 st.caption("Built by an AI that claims this code is production-ready.")
